@@ -9,25 +9,29 @@ open polynomial
 open multiset
 open real
 
--- def sign_changes (f : polynomial ℝ) := sorry
 
 def proots (f : polynomial ℝ) := filter (λ x: ℝ, x > 0) (f.roots)
 def nproots (f : polynomial ℝ) := (proots f).card
 
 variable (f : polynomial ℝ)
-#check f.coeff
+
 def nonzero_coeff_list (f : polynomial ℝ) := 
 list.map f.coeff ( finset.sort nat.le f.support)
 
-def sign_change : (option ℝ) → (option ℝ) → Prop
-| none a := false
-| b none := false
-| (some a) (some b) := a * b < 0
+noncomputable def list.num_sign_changes : list ℝ → ℕ
+| [] := 0
+| [h0] := 0
+| (h0 :: h1 :: tail) := bool.to_nat (h0 * h1 < 0) + list.num_sign_changes (h1 :: tail)
 
-def changes_sign (f : polynomial ℝ) (i : ℕ) :=
-sign_change ((nonzero_coeff_list f).nth i)  ((nonzero_coeff_list f).nth (i+1))
+def num_sign_changes (f : polynomial ℝ) := list.num_sign_changes (nonzero_coeff_list f)
 
-theorem rule_of_signs (f : polynomial ℝ): :=
+lemma list.parity_sign (S : list ℝ) (h: S ≠ []) : even (S.num_sign_changes - bool.to_nat (S.head * (S.last h) < 0)) :=
+begin
+  sorry
+end
+
+
+theorem rule_of_signs (f : polynomial ℝ): num_sign_changes f ≥ nproots f ∧ even (num_sign_changes f - nproots f) :=
 begin
   sorry
 end
