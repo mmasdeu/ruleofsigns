@@ -13,12 +13,17 @@ def proots (f : polynomial ℝ) := filter (λ x: ℝ, x > 0) (f.roots)
 
 def inv_p_proots (f : polynomial ℝ) := multiset.map (λ (x : ℝ), 1/x) (proots f)
 
-variables {f g : polynomial ℝ} [degree f =3] [degree g =3] 
- [f.coeff 3 = 1] [g.coeff 3 = 1]
- [multiset.card (proots f) = 3]
+variables {f g : polynomial ℝ} [ f ≠ 0 ] [ g ≠ 0 ]
+ [↑(multiset.card (proots f)) = polynomial.degree f]
+ [multiset.card (proots f) = multiset.card (proots g)]
+ [ polynomial.monic f ] [ polynomial.monic g ]
 
-lemma a_formula (h : multiset.card (proots f) = 3) (H : f.coeff 3 = 1) : 
-  f.coeff 2 = sum(proots f) :=
+
+lemma a_formula 
+  (h : ↑(multiset.card (proots f)) = polynomial.degree f) 
+  (H : f.leading_coeff = 1)
+  (n: ℕ) (hn: f.degree = ↑n) (n > 1) :
+  f.coeff (n-1) = sum(proots f) :=
 begin
   sorry
 end
