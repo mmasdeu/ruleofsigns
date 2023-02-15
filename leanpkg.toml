@@ -1,8 +1,8 @@
 [package]
 name = "ruleofsigns"
 version = "0.1"
-lean_version = "leanprover-community/lean:3.42.0"
+lean_version = "leanprover-community/lean:3.50.3"
 path = "src"
 
 [dependencies]
-mathlib = {git = "https://github.com/leanprover-community/mathlib", rev = "912631021bfb31a1f7f37eaccad1893267028c08"}
+mathlib = {git = "https://github.com/leanprover-community/mathlib", rev = "372edc36e5d2caafdd135769e0136b5a59186834"}

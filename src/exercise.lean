@@ -3,6 +3,7 @@ import data.polynomial.field_division
 import ring_theory.localization.fraction_ring
 import data.real.sign
 
+
 noncomputable theory
 open_locale classical big_operators polynomial
 
@@ -37,6 +38,30 @@ begin
   sorry
 end
 
+example {R : Type*}  [comm_ring R] [is_domain R] (p : R[X]) (a : R):
+root_multiplicity a p = count a p.roots :=
+begin
+sorry
+end
+
+example {R : Type*} {α β : multiset R} (h : α ≤ β)
+(a : R) : count a α ≤ count a β :=
+begin
+refine le_iff_count.mp h a,
+end
+
+example {R S : Type*} [comm_ring R] [comm_ring S]
+[is_domain R] [is_domain S]
+(f : R →+* S) (h : function.injective f) (p : R[X]) :
+map f p.roots ≤ 
+((polynomial.map_ring_hom f) p).roots :=
+begin
+simp,
+rw le_iff_count,
+intro a,
+apply polynomial.count_map_roots h a,
+end
+
 /-- The product `∏ (X - a)` for `a` inside the multiset `p.roots` divides `p`. -/
 lemma prod_multiset_X_sub_C_dvd' {R : Type*}
 [comm_ring R] [is_domain R] [cancel_comm_monoid_with_zero R]
@@ -44,11 +69,36 @@ lemma prod_multiset_X_sub_C_dvd' {R : Type*}
   (multiset.map (λ (a : R), X - C a) p.roots).prod ∣ p :=
 begin
   let Q := fraction_ring R,
-  let p' := map (algebra_map R Q) p,
+  let ι := algebra_map R Q,
+  let ι' : R[X] →+* Q[X] := polynomial.map_ring_hom ι,
+  let p' := map ι p,
   have h1 := prod_multiset_X_sub_C_dvd p',
-  have h2 : map (algebra_map R Q) (map (λ (a : R), X - C a) p.roots).prod ∣ 
+  have h2 : ι' (map (λ (a : R), X - C a) p.roots).prod ∣ 
   (map (λ (a : Q), X - C a) p'.roots).prod,
   {
+    have haux : ∀ a : R,
+    ι' (X - C a) = X - C (ι a),
+    {
+      intro a,
+      norm_num,
+    },
+    rw map_multiset_prod,
+    have :
+    (map ι' ((map (λ (a : R), X - C a) p.roots))).prod
+    = (((map (λ (a : R), X - C (ι a)) p.roots))).prod,
+    {
+      apply congr_arg multiset.prod,
+      simp only [←haux],
+      apply multiset.map_map,
+    },
+    rw this,
+    clear this,
+    have : (map ι p.roots) ≤ p'.roots,
+    {
+      
+
+    },
+    -- (map (λ (a : R), X - C ((algebra_map R Q) a)) p.roots).prod
     -- use something about prod of subsets
     sorry
   },
@@ -84,12 +134,3 @@ begin
   sorry
 end
 
-lemma card_inv (hgf : inv_p_proots f = g.roots) : multiset.card (proots g) = 3 :=
-begin
-  sorry
-end
-
-example (hgf : inv_p_proots f = proots g) : f.coeff 2 * g.coeff 2 ≥ 3 :=
-begin
-  sorry
-end
