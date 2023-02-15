@@ -1,5 +1,6 @@
 import data.polynomial.ring_division
 import data.polynomial.field_division
+import data.polynomial.inductions
 import ring_theory.polynomial.basic
 import data.real.sign
 import tactic
@@ -13,8 +14,11 @@ open multiset
 
 variables {R : Type*} [linear_ordered_field R]
 
-def polynomial.positive_roots (f : polynomial R) := f.roots.filter (λ x, 0 < x)
-def polynomial.number_positive_roots (f : polynomial R) := f.positive_roots.card
+def polynomial.positive_roots (f : polynomial R) :=
+f.roots.filter (λ x, 0 < x)
+
+def polynomial.number_positive_roots (f : polynomial R) :=
+f.positive_roots.card
 
 
 variables {p q f : polynomial R}
@@ -26,11 +30,12 @@ begin
 rw smul_eq_C_mul,
 end
 
-lemma mem_positive_roots {x : R} : x ∈ p.positive_roots ↔ x ∈ p.roots ∧ 0 < x :=
+lemma mem_positive_roots {x : R} :
+x ∈ p.positive_roots ↔ x ∈ p.roots ∧ 0 < x :=
 by rw [positive_roots, mem_filter]
 
-/-
-The set of positive roots of x-a is {a} when 0 < a
+/--
+The set of positive roots of X-a is {a} when 0 < a
 -/
 lemma positive_roots_X_sub_C_of_zero_lt {a : R} (h : 0 < a) :
 (X - C a).positive_roots = {a} :=
@@ -41,7 +46,20 @@ begin
   simp [h],
 end
 
-/-
+lemma positive_roots_X : polynomial.positive_roots (@X R _) = ∅ :=
+begin
+  rw polynomial.positive_roots,
+  rw roots_X,
+  simp,
+  rw filter_eq_nil,
+  intros a ha,
+  simp at ha,
+  subst ha,
+  exact irrefl 0,
+end
+
+
+/--
 The positive roots of the monic normalization of f
 -/
 lemma positive_roots_normalize_eq_positive_roots :
@@ -51,7 +69,7 @@ begin
   refl,
 end
 
-/-
+/--
 The positive roots of the product of two polinomials
 -/
 lemma positive_roots_mul {p q : polynomial R} (hpq : p * q ≠ 0):
@@ -61,7 +79,17 @@ begin
   refl,
 end
 
-/-
+lemma positive_roots_X_pow (i : ℕ): polynomial.positive_roots ((@X R _)^i) = ∅ :=
+begin
+  rw positive_roots,
+  rw roots_pow,
+  simp [filter_eq_nil],
+  intros a ha,
+  replace ha := mem_of_mem_nsmul ha,
+  simp at ha,
+  linarith [ha],
+end
+/--
 The positive roots don't change when multiplying by X
 -/
 lemma positive_roots_mul_X (hp : p ≠ 0) :
@@ -72,21 +100,18 @@ begin
     apply mul_ne_zero hp X_ne_zero,
   },
   rw positive_roots_mul hnz,
-  have : polynomial.positive_roots (@X R _) = ∅,
-  {
-    rw polynomial.positive_roots,
-    rw roots_X,
-    simp,
-    rw filter_eq_nil,
-    intros a ha,
-    simp at ha,
-    subst ha,
-    exact irrefl 0,
-  },
-  simp [this],
+  rw positive_roots_X,
+  simp only [empty_eq_zero, add_zero],
 end
 
-/-
+lemma positive_roots_mul_X_pow (hp : p ≠ 0) (i : ℕ) :
+  (p * X^i).positive_roots = p.positive_roots :=
+begin
+  sorry
+end
+
+-- Proposition 1 of Levin
+/--
 If all coefficients of p are non-negative, then p has no positive roots.
 -/
 lemma positive_roots_empty_of_positive_coeffs (h : ∀ n ∈ p.support, 0 < p.coeff n) :
@@ -102,6 +127,7 @@ begin
   obtain ⟨x, hx⟩ := exists_mem_of_ne_zero he,
   cases mem_positive_roots.mp hx with hxr hxp,
   rw [mem_roots hp, is_root.def, eval_eq_sum] at hxr,
+
   apply lt_irrefl (0 : R),
   nth_rewrite_rhs 0 ← hxr,
   convert finset.sum_lt_sum_of_nonempty _ _,
@@ -115,13 +141,13 @@ begin
   exact mul_pos h (pow_pos hxp n),
 end
 
-/-
+/--
 The list of nonzero coefficients of a polynomial
 -/
 def polynomial.nonzero_coeff_list (f : polynomial R) :=
 list.map f.coeff (f.support.sort (≤))
 
-/-
+/--
 The support doesn't change when scaling by a nonzero constant
 -/
 lemma polynomial.support_smul_of_ne_zero (f : polynomial R) {a : R} (h : a ≠ 0) : (a • f).support = f.support :=
@@ -143,7 +169,7 @@ begin
   simp [this],
 end
 
-/-
+/--
 The number of sign changes in a list
 -/
 noncomputable def list.num_sign_changes : list R → ℕ
@@ -183,12 +209,12 @@ induction l with a tail,
 }
 
 end
-/-
+
+/--
 The number of sign changes of a  polynomial
 -/
 def polynomial.num_sign_changes (f : polynomial R) :=
 f.nonzero_coeff_list.num_sign_changes
-
 
 
 lemma polynomial.num_sign_changes_smul (f : polynomial R) (c : R) (hc : c ≠ 0) :
@@ -200,13 +226,32 @@ begin
   rw ← list.num_sign_changes_smul _  _ hc,
 end
 
-/-
+lemma polynomial.num_sign_changes_mul_X (f : polynomial R):
+(f * X).num_sign_changes = f.num_sign_changes :=
+begin
+sorry
+end
+
+lemma polynomial.num_sign_changes_mul_X_pow (f : polynomial R) (i : ℕ):
+(f * X^i).num_sign_changes = f.num_sign_changes :=
+begin
+  induction i with n hn,
+  {
+    simp only [pow_zero, mul_one],    
+  },
+  {
+    rw show f * X ^ n.succ = (f * X^n) * X, by ring_nf,
+    rw polynomial.num_sign_changes_mul_X,
+    exact hn,
+  }
+end
+
+/--
 The number of sign changes can be computed on the monic normalization
 -/
 lemma num_sign_changes_normalize_eq_num_sign_changes :
   (normalize p).num_sign_changes = p.num_sign_changes :=
 begin
-  --rw [polynomial.num_sign_changes],
   have hnz := (norm_unit (leading_coeff p)).ne_zero,
   simp only [coe_norm_unit, coeff_mul_C, normalize_apply],
   rw ← p.num_sign_changes_smul (norm_unit p.leading_coeff) hnz,
@@ -226,6 +271,9 @@ begin
 end
 
 -- Lemma 2 of Levin
+/--
+For all α > 0, the polynomial (X-x) * p has at least one more sign change than p
+-/
 lemma num_sign_changes_X_sub_C_mul' {x : R} (hx : 0 < x) (hp : coeff p 0 ≠ 0) :
   p.num_sign_changes + 1 ≤ ((X - C x : polynomial R) * p).num_sign_changes :=
 begin
@@ -235,7 +283,15 @@ end
 lemma num_sign_changes_X_sub_C_mul {x : R} (hx : 0 < x) :
   p.num_sign_changes + 1 ≤ ((X - C x : polynomial R) * p).num_sign_changes :=
 begin
-sorry
+  have : ∃ q, ∃ (i : ℕ), p = q * X^i ∧ q.coeff 0 ≠ 0,
+  {
+    sorry
+  },
+  obtain ⟨q, ⟨i, ⟨rfl, hnz⟩⟩⟩ := this,
+  rw polynomial.num_sign_changes_mul_X_pow,
+  rw show (X - C x) * (q * X^i) = ((X - C x) * q) * X^i, by ring,
+  rw polynomial.num_sign_changes_mul_X_pow,
+  exact num_sign_changes_X_sub_C_mul' hx hnz,
 end
 
 theorem descartes_sign_rule_1'  (hp : p ≠ 0) : p.number_positive_roots ≤ p.num_sign_changes :=
