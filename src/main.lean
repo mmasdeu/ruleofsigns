@@ -95,19 +95,38 @@ The positive roots don't change when multiplying by X
 lemma positive_roots_mul_X (hp : p ≠ 0) :
   p.positive_roots = (p * X).positive_roots :=
 begin
-  have hnz : p * X ≠ 0,
-  {
-    apply mul_ne_zero hp X_ne_zero,
-  },
-  rw positive_roots_mul hnz,
-  rw positive_roots_X,
+  have hnz : p * X ≠ 0 := mul_ne_zero hp X_ne_zero,
+  rw [positive_roots_mul hnz, positive_roots_X],
   simp only [empty_eq_zero, add_zero],
 end
 
-lemma positive_roots_mul_X_pow (hp : p ≠ 0) (i : ℕ) :
+
+lemma X_pow_ne_zero {i : ℕ} : (X : polynomial R)^i ≠ 0 :=
+begin
+  induction i with d hd,
+  { simp only [pow_zero, ne.def, one_ne_zero, not_false_iff] },
+  { apply mul_ne_zero X_ne_zero hd }
+end
+
+lemma positive_roots_mul_X_pow {i : ℕ} (hp : p ≠ 0) :
   (p * X^i).positive_roots = p.positive_roots :=
 begin
-  sorry
+  induction i with n hn,
+  {
+    simp,
+  },
+  {
+    rw show (X : polynomial R)^n.succ = X * X^n, by refl,
+    rw show p * (X * X^n) = (p * X^n) * X, by ring,
+    rw ← hn,
+    rw positive_roots_mul,
+    {
+      simp [positive_roots_X],
+    },
+    {
+      apply mul_ne_zero (mul_ne_zero hp X_pow_ne_zero) X_ne_zero,
+    }
+  }
 end
 
 -- Proposition 1 of Levin
@@ -127,7 +146,6 @@ begin
   obtain ⟨x, hx⟩ := exists_mem_of_ne_zero he,
   cases mem_positive_roots.mp hx with hxr hxp,
   rw [mem_roots hp, is_root.def, eval_eq_sum] at hxr,
-
   apply lt_irrefl (0 : R),
   nth_rewrite_rhs 0 ← hxr,
   convert finset.sum_lt_sum_of_nonempty _ _,
@@ -146,6 +164,7 @@ The list of nonzero coefficients of a polynomial
 -/
 def polynomial.nonzero_coeff_list (f : polynomial R) :=
 list.map f.coeff (f.support.sort (≤))
+
 
 /--
 The support doesn't change when scaling by a nonzero constant
@@ -172,7 +191,7 @@ end
 /--
 The number of sign changes in a list
 -/
-noncomputable def list.num_sign_changes : list R → ℕ
+def list.num_sign_changes : list R → ℕ
 | [] := 0
 | [a] := 0
 | (a :: b :: tail) := bool.to_nat (a * b < 0) + list.num_sign_changes (b :: tail)
@@ -226,10 +245,75 @@ begin
   rw ← list.num_sign_changes_smul _  _ hc,
 end
 
+lemma polynomial.support_mul_X (f : polynomial R) :
+(f * X).support = f.support.map ⟨nat.succ, nat.succ_injective⟩ :=
+begin
+  ext i,
+  cases i with i i,
+  {
+    simp only [mem_support_iff, mul_coeff_zero, coeff_X_zero, mul_zero,
+    ne.def, eq_self_iff_true, not_true, finset.mem_map,
+    function.embedding.coe_fn_mk, exists_false],
+  },
+  split;
+  {
+    intro hi,
+    simpa using hi,
+  },
+end
+
+
+lemma polynomial.support_mul_X_pow {i : ℕ} (f : polynomial R) :
+(f * X^i).support = f.support.map ⟨nat.add i, add_right_injective i⟩ :=
+begin
+  induction i with i hi,
+  {
+    ext,
+    simp,
+  },
+  {
+    sorry
+  }
+end
+
+lemma polynomial.nonzero_coeff_list_mul_X (f : polynomial R) :
+  (f * X).nonzero_coeff_list = f.nonzero_coeff_list :=
+begin
+  repeat {rw polynomial.nonzero_coeff_list},
+  rw polynomial.support_mul_X,
+  ext i a,
+  simp [coeff_mul_X],
+  split,
+  {
+    intro ha,
+    obtain ⟨j, ⟨hj1, hj2⟩⟩ := ha,
+    cases j,
+    {
+      simp at hj2,
+      subst hj2,
+      simp at hj1,
+      sorry
+    },
+    rw coeff_mul_X at hj2,
+    use j,
+    split,
+    {
+      sorry
+    },
+    exact hj2,
+  },
+  {
+    sorry
+  }
+end
+
 lemma polynomial.num_sign_changes_mul_X (f : polynomial R):
 (f * X).num_sign_changes = f.num_sign_changes :=
 begin
-sorry
+  rw polynomial.num_sign_changes,
+  rw polynomial.num_sign_changes,
+  congr' 1,
+  apply polynomial.nonzero_coeff_list_mul_X,
 end
 
 lemma polynomial.num_sign_changes_mul_X_pow (f : polynomial R) (i : ℕ):
