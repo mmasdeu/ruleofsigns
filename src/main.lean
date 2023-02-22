@@ -72,14 +72,16 @@ end
 /--
 The positive roots of the product of two polinomials
 -/
-lemma positive_roots_mul {p q : polynomial R} (hpq : p * q ≠ 0):
+lemma positive_roots_mul {p q : polynomial R}
+(hpq : p * q ≠ 0):
   (p * q).positive_roots = p.positive_roots + q.positive_roots :=
 begin
   rw [positive_roots, roots_mul hpq, filter_add],
   refl,
 end
 
-lemma positive_roots_X_pow (i : ℕ): polynomial.positive_roots ((@X R _)^i) = ∅ :=
+lemma positive_roots_X_pow (i : ℕ):
+polynomial.positive_roots ((@X R _)^i) = ∅ :=
 begin
   rw positive_roots,
   rw roots_pow,
@@ -111,22 +113,9 @@ end
 lemma positive_roots_mul_X_pow {i : ℕ} (hp : p ≠ 0) :
   (p * X^i).positive_roots = p.positive_roots :=
 begin
-  induction i with n hn,
-  {
-    simp,
-  },
-  {
-    rw show (X : polynomial R)^n.succ = X * X^n, by refl,
-    rw show p * (X * X^n) = (p * X^n) * X, by ring,
-    rw ← hn,
-    rw positive_roots_mul,
-    {
-      simp [positive_roots_X],
-    },
-    {
-      apply mul_ne_zero (mul_ne_zero hp X_pow_ne_zero) X_ne_zero,
-    }
-  }
+rw positive_roots_mul (mul_ne_zero hp X_pow_ne_zero),
+rw positive_roots_X_pow,
+simp only [empty_eq_zero, add_zero],
 end
 
 -- Proposition 1 of Levin
@@ -143,6 +132,7 @@ begin
     apply he,
     rw [positive_roots, hp, roots_zero, empty_eq_zero, filter_zero]
   },
+  --cases exists_mem_of_ne_zero he with x hx,
   obtain ⟨x, hx⟩ := exists_mem_of_ne_zero he,
   cases mem_positive_roots.mp hx with hxr hxp,
   rw [mem_roots hp, is_root.def, eval_eq_sum] at hxr,
@@ -162,8 +152,9 @@ end
 /--
 The list of nonzero coefficients of a polynomial
 -/
-def polynomial.nonzero_coeff_list (f : polynomial R) :=
-list.map f.coeff (f.support.sort (≤))
+def polynomial.nonzero_coeff_list
+(f : polynomial R) :=
+(f.support.sort (≤)).map f.coeff
 
 
 /--
@@ -194,17 +185,18 @@ The number of sign changes in a list
 def list.num_sign_changes : list R → ℕ
 | [] := 0
 | [a] := 0
-| (a :: b :: tail) := bool.to_nat (a * b < 0) + list.num_sign_changes (b :: tail)
+| (a :: b :: tail) :=
+bool.to_nat (a * b < 0) + list.num_sign_changes (b :: tail)
 
 lemma list.num_sign_changes_smul (l : list R) (c : R) (hc : c ≠ 0) :
 l.num_sign_changes = (l.map (λ x, c * x)).num_sign_changes :=
 begin
-induction l with a tail,
+induction l with a tail HI,
 {
   refl,
 },
 {
-  induction tail with b tail,
+  induction tail with b tail HI2,
   {
     refl,
   },
@@ -212,7 +204,7 @@ induction l with a tail,
     simp at *,
     rw list.num_sign_changes,
     rw list.num_sign_changes,
-    rw l_ih,
+    rw HI,
     simp_rw show (a * b < 0) = (c * a * (c * b) < 0), by
     {
       ext,
