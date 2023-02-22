@@ -115,8 +115,16 @@ begin
   },
   obtain ⟨r1, hr1⟩ := this,
   use r1,
-  -- use injectivity of localization map
-  sorry
+  have : map (algebra_map R Q) p = map (algebra_map R Q) ((map (λ (a : R), X - C a) p.roots).prod * r1),
+  {
+    rwa [polynomial.map_mul, hr1],
+  },
+  have map_inj : function.injective (algebra_map R Q),
+  {
+    exact is_fraction_ring.injective R Q,
+  },
+  obtain pol_map_inj := polynomial.map_injective (algebra_map R Q) map_inj,
+  exact pol_map_inj this,
 end
 
 lemma pol_factor {R : Type*} [field R] (f : polynomial R) :
