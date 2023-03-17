@@ -3,6 +3,9 @@ import data.polynomial.field_division
 import data.polynomial.inductions
 import ring_theory.polynomial.basic
 import data.real.sign
+import data.quot
+import order.hom.basic
+import data.fin.tuple.basic
 import tactic
 
 
@@ -149,13 +152,54 @@ begin
   exact mul_pos h (pow_pos hxp n),
 end
 
+
+
 /--
 The list of nonzero coefficients of a polynomial
 -/
 def polynomial.nonzero_coeff_list
-(f : polynomial R) :=
-(f.support.sort (≤)).map f.coeff
+(f : polynomial R) := (f.support.sort (≤)).map f.coeff
 
+open list
+
+lemma list.sorted_of_monotone (l : list R) (hl : sorted (≤) l)
+(g : R →o R) : sorted (≤) (map g l) :=
+list.pairwise.map g.1 g.2 hl
+
+lemma list.sort_commutes_monotone (S : list ℕ)
+(g : ℕ →o ℕ) : (S.merge_sort (≤)).map g = (S.map g).merge_sort (≤)
+:=
+begin
+  apply @eq_of_perm_of_sorted ℕ (≤),
+  {
+    calc
+    map ⇑g (merge_sort has_le.le S) ~ map g.1 S : by {
+      apply list.perm.map,
+      apply perm_merge_sort,
+    }
+    ... ~ merge_sort has_le.le (map ⇑g S) : by {
+      symmetry,
+      apply perm_merge_sort,
+    }
+  },
+  {
+    apply pairwise.map g.1 g.2,
+    apply sorted_merge_sort,
+  },
+  apply sorted_merge_sort,
+end
+
+lemma multiset.sort_commutes_monotone (S : multiset ℕ)
+(g : ℕ ↪o ℕ) : (sort (≤) S).map g = sort (≤)
+(multiset.map g S)
+:=
+begin
+  set l : list ℕ := S.to_list,
+  rw show S = (l : multiset ℕ), by simp only [coe_to_list],
+  rw (show (sort has_le.le ↑l) = merge_sort (≤) l, by exact multiset.coe_sort (≤) l),
+  rw (show (sort has_le.le (map ⇑g ↑l)) = merge_sort (≤) (map g l), by exact multiset.coe_sort (≤) _),
+  apply list.sort_commutes_monotone l g,
+end
 
 /--
 The support doesn't change when scaling by a nonzero constant
@@ -348,7 +392,7 @@ end
 
 -- Lemma 2 of Levin
 /--
-For all α > 0, the polynomial (X-x) * p has at least one more sign change than p
+For all α > 0, the polynomial (X-α) * p has at least one more sign change than p
 -/
 lemma num_sign_changes_X_sub_C_mul' {x : R} (hx : 0 < x) (hp : coeff p 0 ≠ 0) :
   p.num_sign_changes + 1 ≤ ((X - C x : polynomial R) * p).num_sign_changes :=
