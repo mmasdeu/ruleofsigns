@@ -1,6 +1,7 @@
 import data.polynomial.ring_division
 import data.polynomial.field_division
 import data.polynomial.inductions
+import data.polynomial.coeff
 import ring_theory.polynomial.basic
 import data.real.sign
 import data.quot
@@ -191,14 +192,20 @@ end
 
 lemma multiset.sort_commutes_monotone (S : multiset ℕ)
 (g : ℕ ↪o ℕ) : (sort (≤) S).map g = sort (≤)
-(multiset.map g S)
-:=
+(multiset.map g S) :=
 begin
   set l : list ℕ := S.to_list,
   rw show S = (l : multiset ℕ), by simp only [coe_to_list],
   rw (show (sort has_le.le ↑l) = merge_sort (≤) l, by exact multiset.coe_sort (≤) l),
   rw (show (sort has_le.le (map ⇑g ↑l)) = merge_sort (≤) (map g l), by exact multiset.coe_sort (≤) _),
   apply list.sort_commutes_monotone l g,
+end
+
+lemma finset.sort_commutes_monotone (S : finset ℕ)
+(g : ℕ ↪o ℕ) : (finset.sort (≤) S).map g = finset.sort (≤) (finset.map g.1 S) :=
+begin
+  repeat {rw finset.sort},
+  apply multiset.sort_commutes_monotone,
 end
 
 /--
@@ -308,39 +315,37 @@ begin
     simp,
   },
   {
-    sorry
+    rw pow_succ,
+    rw [show f * (X * X^i) = (f*X^i) * X, by ring],
+    rw [polynomial.support_mul_X, hi, finset.map_map],
+    ext r,
+    simp only [finset.mem_map, mem_support_iff,
+    ne.def, function.embedding.trans_apply, function.embedding.coe_fn_mk,
+    nat.add_def, exists_prop],
+    simp_rw show ∀ (a : ℕ), (i+a).succ = i.succ + a,
+    by {intro a, rw nat.succ_eq_add_one, rw nat.succ_eq_add_one, ring_nf},
   }
+end
+
+lemma polynomial.nonzero_coeff_list_mul_X_pow (f : polynomial R) (i : ℕ) :
+  (f * X^i).nonzero_coeff_list = f.nonzero_coeff_list :=
+begin
+  repeat {rw polynomial.nonzero_coeff_list},
+  rw polynomial.support_mul_X_pow,
+  set addi : ℕ ↪o ℕ := ⟨⟨i.add, λ a b hab, (add_right_inj i).mp hab⟩, λ a b, by simp⟩ with haddi,
+  rw (show function.embedding.mk i.add (add_right_injective i)  = addi.to_embedding, by refl),
+  rw ←finset.sort_commutes_monotone f.support addi,
+  simp only [function.embedding.coe_fn_mk, rel_embedding.coe_fn_mk, list.map_map],
+  rw show (f * X^i).coeff ∘ i.add = f.coeff, by {ext,
+  simp,
+  rw [add_comm , coeff_mul_X_pow],
+  },
 end
 
 lemma polynomial.nonzero_coeff_list_mul_X (f : polynomial R) :
   (f * X).nonzero_coeff_list = f.nonzero_coeff_list :=
 begin
-  repeat {rw polynomial.nonzero_coeff_list},
-  rw polynomial.support_mul_X,
-  ext i a,
-  simp [coeff_mul_X],
-  split,
-  {
-    intro ha,
-    obtain ⟨j, ⟨hj1, hj2⟩⟩ := ha,
-    cases j,
-    {
-      simp at hj2,
-      subst hj2,
-      simp at hj1,
-      sorry
-    },
-    rw coeff_mul_X at hj2,
-    use j,
-    split,
-    {
-      sorry
-    },
-    exact hj2,
-  },
-  {
-    sorry
-  }
+  rw [←pow_one X, polynomial.nonzero_coeff_list_mul_X_pow f 1],
 end
 
 lemma polynomial.num_sign_changes_mul_X (f : polynomial R):
@@ -397,20 +402,57 @@ For all α > 0, the polynomial (X-α) * p has at least one more sign change than
 lemma num_sign_changes_X_sub_C_mul' {x : R} (hx : 0 < x) (hp : coeff p 0 ≠ 0) :
   p.num_sign_changes + 1 ≤ ((X - C x : polynomial R) * p).num_sign_changes :=
 begin
+  have hpnz : p ≠ 0,
+  {
+    intro hc,
+    rw hc at hp,
+    simp at hp,
+    exact hp,
+  },
   sorry
 end
 
-lemma num_sign_changes_X_sub_C_mul {x : R} (hx : 0 < x) :
+lemma polynomial.root_iff_divides_X_sub_C {p : polynomial R} (hp : p ≠ 0) (α : R) :
+∃ (q : polynomial R), p = (X-C α)^(p.root_multiplicity α) * q ∧ q.eval α ≠ 0 :=
+begin
+have H1 := @le_root_multiplicity_iff  _ _ _ hp α (p.root_multiplicity α),
+simp at H1,
+have H2 := @root_multiplicity_le_iff  _ _ _ hp α (p.root_multiplicity α),
+simp at H2,
+obtain ⟨q, hq⟩ := H1,
+use q,
+split, exact hq,
+intro hc,
+replace hc : is_root q α := is_root.def.mpr hc,
+obtain ⟨r, hr⟩ := dvd_iff_is_root.mpr hc,
+apply H2,
+rw hr at hq,
+use r,
+generalize hj : root_multiplicity α p = j,
+rw hj at hq,
+rw hq,
+ring_exp,
+end
+
+lemma polynomial.root_zero_iff_divides_X  {p : polynomial R} (hp : p ≠ 0)  :
+∃ q,  p = X^(p.root_multiplicity 0)  * q ∧ (q.coeff 0 ≠ 0) :=
+begin
+  obtain ⟨q, hq⟩ := polynomial.root_iff_divides_X_sub_C hp 0,
+  use q,
+  simp at hq,
+  have H : q.coeff 0 = q.eval 0,
+  { simp only [eval, eval₂_at_zero, ring_hom.id_apply] },
+  rw H,
+  exact hq,
+end
+
+lemma num_sign_changes_X_sub_C_mul (hp : p ≠ 0) {x : R} (hx : 0 < x) :
   p.num_sign_changes + 1 ≤ ((X - C x : polynomial R) * p).num_sign_changes :=
 begin
-  have : ∃ q, ∃ (i : ℕ), p = q * X^i ∧ q.coeff 0 ≠ 0,
-  {
-    sorry
-  },
-  obtain ⟨q, ⟨i, ⟨rfl, hnz⟩⟩⟩ := this,
-  rw polynomial.num_sign_changes_mul_X_pow,
-  rw show (X - C x) * (q * X^i) = ((X - C x) * q) * X^i, by ring,
-  rw polynomial.num_sign_changes_mul_X_pow,
+  obtain ⟨q, ⟨h, hnz⟩⟩ := polynomial.root_zero_iff_divides_X hp,
+  have h' : (X - C x) * (q * X^(p.root_multiplicity 0)) = ((X - C x) * q) * X^(p.root_multiplicity 0),
+  { ring },
+  rw [h, mul_comm, polynomial.num_sign_changes_mul_X_pow, h', polynomial.num_sign_changes_mul_X_pow],
   exact num_sign_changes_X_sub_C_mul' hx hnz,
 end
 
@@ -430,12 +472,19 @@ begin
       simp [card_add, positive_roots_X_sub_C_of_zero_lt hx.2] at h,
       exact nat.succ.inj h
     },
+    have hp' : p / (X - C x) ≠ 0,
+    {
+      intro hc,
+      apply hp,
+      rw hc,
+      ring,
+    },
     rw [← this, positive_roots_mul, card_add],
     {
     calc (X - C x).positive_roots.card + (p / (X - C x)).positive_roots.card = 1 + (p / (X - C x)).positive_roots.card : by simp [positive_roots_X_sub_C_of_zero_lt hx.2]
       ... ≤ 1 + (p / (X - C x)).num_sign_changes : nat.add_le_add_left _ 1
       ... = (p / (X - C x)).num_sign_changes + 1 : add_comm _ _
-      ... ≤ ((X - C x) * (p / (X - C x))).num_sign_changes : num_sign_changes_X_sub_C_mul hx.2,
+      ... ≤ ((X - C x) * (p / (X - C x))).num_sign_changes : num_sign_changes_X_sub_C_mul hp' hx.2,
       rw hkey,
       apply ih (right_ne_zero_of_mul hp),
       exact hkey,
