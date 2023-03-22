@@ -11,7 +11,7 @@ import tactic
 
 
 noncomputable theory
-open_locale classical
+open_locale classical big_operators
 
 
 open multiset
@@ -393,6 +393,66 @@ begin
     rw [this, coeff_mul_X_sub_C],
     simp, },
   { have : a = 0 := by omega, simp [this], },
+end
+
+lemma finset.range_succ_succ (i : ℕ) : finset.range i.succ.succ = insert 0  (insert 1 (finset.filter (λ j, 1 < j) (finset.range i.succ.succ))):=
+begin
+  ext,
+  simp,
+  cases a,
+  {finish},
+  cases a,
+  {finish},
+  finish,
+end
+
+lemma aux_lemma (a : ℕ) (f : ℕ → R): ite (1 < a)  ((ite (0 = a) (1 : R) 0 - ite (1 = a) 1 0) * f a) (0 : R) = 0 :=
+begin
+  cases a with a a,
+  { simp },
+  cases a with a a,
+  { simp },
+  have h0 : ¬ 0 = a.succ.succ,
+  { 
+    exact ne_zero.ne' (nat.succ a).succ,
+  },
+  have h1 : ¬ 1 = a.succ.succ,
+  { 
+    intro hc,
+    have hh : 0 = a.succ := nat.succ.inj hc,
+    finish,   
+  },
+  simp [h0, h1],
+end
+
+lemma coeff_X_sub_C_mul (hp : p ≠ 0) (i : ℕ):
+  p.coeff i = ∑ j in finset.range (i+1), ((C (1 : R) - X) * p).coeff j :=
+begin
+  induction i with i hi,
+    {simp},
+  rw finset.range_succ,
+  rw finset.sum_insert finset.not_mem_range_self,
+  rw ← hi,
+  rw coeff_mul,
+  rw finset.nat.sum_antidiagonal_eq_sum_range_succ (λ x y, (C (1:R)- X).coeff x * p.coeff y) (i.succ),
+  simp,
+  rw finset.range_succ_succ,
+  rw finset.sum_insert,
+  {
+    rw finset.sum_insert,
+    {
+      repeat {simp_rw coeff_one},
+      repeat {simp_rw coeff_X},
+      simp_rw [finset.sum_filter, aux_lemma],
+      simp,
+    },
+    {
+      simp,
+    }
+  },
+  {
+    simp,
+  }
 end
 
 -- Lemma 2 of Levin
