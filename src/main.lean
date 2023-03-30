@@ -233,11 +233,52 @@ end
 /--
 The number of sign changes in a list
 -/
-def list.num_sign_changes : list R → ℕ
+@[simp]
+noncomputable def list.num_sign_changes : list R → ℕ
 | [] := 0
 | [a] := 0
 | (a :: b :: tail) :=
-bool.to_nat (a * b < 0) + list.num_sign_changes (b :: tail)
+ite (b = 0) (list.num_sign_changes (a :: tail))
+(bool.to_nat (a * b < 0) + list.num_sign_changes (b :: tail))
+
+@[simp]
+lemma list.num_sign_changes_zero {a : R} (ha : a = 0) (l : list R) :
+list.num_sign_changes (a :: l) = list.num_sign_changes l :=
+begin
+  rw ha,
+  induction l with b tail,
+  {
+    simp,
+  },
+  by_cases hb : b = 0;
+  {
+    simp [hb],
+    try {refl},
+  },
+end
+
+@[simp]
+lemma list.num_sign_changes_zero' {a b : R} (ha : b = 0) (l : list R) :
+list.num_sign_changes (a :: b :: l) = list.num_sign_changes (a :: l) :=
+begin
+  sorry
+end
+
+@[simp]
+lemma list.num_sign_changes_of_eq_signs {a b : R} (h : 0 < a * b) (l : list R) :
+list.num_sign_changes (a :: b :: l) = list.num_sign_changes (b :: l) :=
+begin
+  sorry
+end
+
+@[simp]
+lemma list.num_sign_changes_of_neq_signs {a b : R} (h : a * b < 0) (l : list R) :
+list.num_sign_changes (a :: b :: l) = 1 + list.num_sign_changes (b :: l) :=
+begin
+  sorry
+end
+
+notation `V` := list.num_sign_changes
 
 lemma list.num_sign_changes_smul (l : list R) (c : R) (hc : c ≠ 0) :
 l.num_sign_changes = (l.map (λ x, c * x)).num_sign_changes :=
@@ -249,14 +290,10 @@ induction l with a tail HI,
 {
   induction tail with b tail HI2,
   {
-    refl,
+    simp,
   },
   {
-    simp at *,
-    rw list.num_sign_changes,
-    rw list.num_sign_changes,
-    rw HI,
-    simp_rw show (a * b < 0) = (c * a * (c * b) < 0), by
+    have hc : (a * b < 0) = (c * a * (c * b) < 0), by
     {
       ext,
       rw show (c * a * ( c * b) = c^2 * (a * b)), by ring,
@@ -267,10 +304,14 @@ induction l with a tail HI,
         nlinarith [H],
       },
     },
+    simp at *,
+    rw HI,
+    by_cases b = 0;
+      simp [*] at *,
   }
 }
-
 end
+
 
 /--
 The number of sign changes of a  polynomial
@@ -279,13 +320,11 @@ def polynomial.num_sign_changes (f : polynomial R) :=
 f.nonzero_coeff_list.num_sign_changes
 
 
-lemma polynomial.num_sign_changes_smul (f : polynomial R) (c : R) (hc : c ≠ 0) :
+lemma polynomial.num_sign_changes_smul (f : polynomial R) {c : R} (hc : c ≠ 0) :
 (c • f).num_sign_changes = f.num_sign_changes :=
 begin
-  rw polynomial.num_sign_changes,
-  rw polynomial.num_sign_changes,
-  rw f.nonzero_coeff_list_smul hc,
-  rw ← list.num_sign_changes_smul _  _ hc,
+  rw [polynomial.num_sign_changes, polynomial.num_sign_changes,
+  f.nonzero_coeff_list_smul hc,←list.num_sign_changes_smul _  _ hc],
 end
 
 lemma polynomial.support_mul_X (f : polynomial R) :
@@ -379,7 +418,7 @@ lemma num_sign_changes_normalize_eq_num_sign_changes :
 begin
   have hnz := (norm_unit (leading_coeff p)).ne_zero,
   simp only [coe_norm_unit, coeff_mul_C, normalize_apply],
-  rw ← p.num_sign_changes_smul (norm_unit p.leading_coeff) hnz,
+  rw ← p.num_sign_changes_smul  hnz,
   congr' 1,
   rw smul_eq_C_mul,
   ring,
@@ -395,7 +434,8 @@ begin
   { have : a = 0 := by omega, simp [this], },
 end
 
-lemma finset.range_succ_succ (i : ℕ) : finset.range i.succ.succ = insert 0  (insert 1 (finset.filter (λ j, 1 < j) (finset.range i.succ.succ))):=
+lemma finset.range_succ_succ (i : ℕ) :
+finset.range i.succ.succ = insert 0  (insert 1 (finset.filter (λ j, 1 < j) (finset.range i.succ.succ))):=
 begin
   ext,
   simp,
@@ -425,11 +465,11 @@ begin
   simp [h0, h1],
 end
 
-lemma coeff_X_sub_C_mul (hp : p ≠ 0) (i : ℕ):
+lemma coeff_X_sub_C_mul (i : ℕ):
   p.coeff i = ∑ j in finset.range (i+1), ((C (1 : R) - X) * p).coeff j :=
 begin
   induction i with i hi,
-    {simp},
+    { simp },
   rw finset.range_succ,
   rw finset.sum_insert finset.not_mem_range_self,
   rw ← hi,
@@ -455,6 +495,46 @@ begin
   }
 end
 
+-- Arthan's version
+lemma arthan (hp : coeff p 0 ≠ 0) :
+ ∃ (m : ℕ), ((X - C 1 : polynomial R) * p).num_sign_changes  =
+ p.num_sign_changes + 2*m + 1:=
+begin
+sorry
+end
+
+@[simp]
+lemma num_sign_changes_cX {c : R} (hc : 0 < c) : (p.comp (c • X)).num_sign_changes = p.num_sign_changes :=
+begin
+sorry
+end
+
+lemma num_sign_changes_X_sub_C_mul'' {a : R} (ha: 0 < a) (hp : coeff p 0 ≠ 0) :
+ ∃ (m : ℕ), ((X - C a : polynomial R) * p).num_sign_changes  = p.num_sign_changes + 2*m + 1:=
+begin
+have hp' : coeff (p.comp (a•X)) 0 ≠ 0, by sorry,
+obtain ⟨m, hm⟩ := arthan hp',
+have ha' : a ≠ 0 := ne_of_gt ha,
+have ha'' : a⁻¹ ≠ 0 := inv_ne_zero ha',
+use m,
+-- reduce to Arthan's lemma by using that p(cx) has the same number of sign changes as p(x)
+calc
+((X - C a) * p).num_sign_changes  = (C a⁻¹ * ((X - C a) * p)).num_sign_changes : by {
+  rw show C a⁻¹ * ((X - C a) * p) = C a⁻¹ • ((X - C a) * p), by simp,
+  rw ← polynomial.num_sign_changes_smul _ ha'',
+  simp,
+}
+... = (C a⁻¹ * ((C a * X - C a) * p.comp(a•X))).num_sign_changes : by {rw ← num_sign_changes_cX ha, simp}
+... = ((C a⁻¹ * (C a * X - C a)) * p.comp(a•X)).num_sign_changes : by {simp}
+... = ((X - C 1) * p.comp(a•X)).num_sign_changes : by {
+  rw show C a * X - C a = C a * (X - C 1), by ring_nf,
+  simp [ha'],
+  }
+... = (p.comp (a•X)).num_sign_changes + 2 * m + 1 : hm
+... = p.num_sign_changes + 2 * m + 1 : by {rw num_sign_changes_cX ha}
+end
+
+
 -- Lemma 2 of Levin
 /--
 For all α > 0, the polynomial (X-α) * p has at least one more sign change than p
@@ -462,14 +542,9 @@ For all α > 0, the polynomial (X-α) * p has at least one more sign change than
 lemma num_sign_changes_X_sub_C_mul' {x : R} (hx : 0 < x) (hp : coeff p 0 ≠ 0) :
   p.num_sign_changes + 1 ≤ ((X - C x : polynomial R) * p).num_sign_changes :=
 begin
-  have hpnz : p ≠ 0,
-  {
-    intro hc,
-    rw hc at hp,
-    simp at hp,
-    exact hp,
-  },
-  sorry
+  obtain ⟨m,hm⟩ := num_sign_changes_X_sub_C_mul'' hx hp,
+  rw hm,
+  linarith,
 end
 
 lemma polynomial.root_iff_divides_X_sub_C {p : polynomial R} (hp : p ≠ 0) (α : R) :
@@ -481,7 +556,8 @@ have H2 := @root_multiplicity_le_iff  _ _ _ hp α (p.root_multiplicity α),
 simp at H2,
 obtain ⟨q, hq⟩ := H1,
 use q,
-split, exact hq,
+split,
+  { exact hq },
 intro hc,
 replace hc : is_root q α := is_root.def.mpr hc,
 obtain ⟨r, hr⟩ := dvd_iff_is_root.mpr hc,
