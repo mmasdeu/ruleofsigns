@@ -242,6 +242,37 @@ ite (b = 0) (list.num_sign_changes (a :: tail))
 (bool.to_nat (a * b < 0) + list.num_sign_changes (b :: tail))
 
 @[simp]
+lemma tt_to_nat_eq_one : tt.to_nat = 1 := rfl
+
+@[simp]
+lemma ff_to_nat_eq_zero : ff.to_nat = 0 := rfl
+
+@[simp]
+lemma list.num_sign_changes_of_eq_signs (a b : R) (tail : list R) (h : 0 < a * b): 
+list.num_sign_changes (a :: b :: tail) = 
+list.num_sign_changes (b :: tail) :=
+begin
+  have hb : b ≠ 0,
+  {
+    intro hc,
+    simpa [hc] using h,
+  },
+  simp [hb,asymm h],
+end
+
+@[simp]
+lemma list.num_sign_changes_of_neq_signs {a b : R} (h : a * b < 0) (l : list R) :
+list.num_sign_changes (a :: b :: l) = 1 + list.num_sign_changes (b :: l) :=
+begin
+  have hb : b ≠ 0,
+  {
+    intro hc,
+    simpa [hc] using h,
+  },
+  simp [h, hb],
+end
+
+@[simp]
 lemma list.num_sign_changes_zero {a : R} (ha : a = 0) (l : list R) :
 list.num_sign_changes (a :: l) = list.num_sign_changes l :=
 begin
@@ -261,24 +292,52 @@ end
 lemma list.num_sign_changes_zero' {a b : R} (ha : b = 0) (l : list R) :
 list.num_sign_changes (a :: b :: l) = list.num_sign_changes (a :: l) :=
 begin
-  sorry
+  simpa using ha,
+end
+example (b : R) : b < 0 ∨ b = 0 ∨ 0 < b :=
+begin
+library_search,
 end
 
 @[simp]
-lemma list.num_sign_changes_of_eq_signs {a b : R} (h : 0 < a * b) (l : list R) :
-list.num_sign_changes (a :: b :: l) = list.num_sign_changes (b :: l) :=
+lemma list.num_sign_changes_eq_sign'
+{a : R} (ha : 0 < a) (l : list R) :
+list.num_sign_changes (a :: l) =
+list.num_sign_changes (1 :: l) :=
 begin
+  have h : 0 < a * (1 : R),
+  {
+    simp [ha],
+  },
+  cases l with b l,
+  {
+    simp,
+  },
+  rcases (@trichotomous _ (<) _ b 0) with hb|hb|hb,
   sorry
 end
 
+
 @[simp]
-lemma list.num_sign_changes_of_neq_signs {a b : R} (h : a * b < 0) (l : list R) :
-list.num_sign_changes (a :: b :: l) = 1 + list.num_sign_changes (b :: l) :=
+lemma list.num_sign_changes_eq_sign''
+{a : R} (ha : a < 0) (l : list R) :
+list.num_sign_changes (a :: l) =
+list.num_sign_changes (-1 :: l) :=
 begin
-  sorry
+  sorry,
 end
+
 
 notation `V` := list.num_sign_changes
+
+example (tail : list R):
+V ((1 :: 2 :: -1 :: 3 :: 2 :: tail) : list R)
+=
+V ((1 :: 2 :: -1 :: 3 :: 5 :: tail) : list R)
+:=
+begin
+norm_num,
+end
 
 lemma list.num_sign_changes_smul (l : list R) (c : R) (hc : c ≠ 0) :
 l.num_sign_changes = (l.map (λ x, c * x)).num_sign_changes :=
