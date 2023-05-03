@@ -294,10 +294,25 @@ list.num_sign_changes (a :: b :: l) = list.num_sign_changes (a :: l) :=
 begin
   simpa using ha,
 end
-example (b : R) : b < 0 ∨ b = 0 ∨ 0 < b :=
+
+lemma list.num_sign_changes_drop_while (l : list R) :
+list.num_sign_changes l = list.num_sign_changes (drop_while (eq 0) l) :=
 begin
-library_search,
+  induction l with a tail,
+  {
+    simp [drop_while],
+  },
+  simp [drop_while],
+  by_cases h : a = 0,
+  {
+    subst h,
+    simpa using l_ih,
+  },
+  {
+    simp [show ¬ (0 = a), by exact ne_comm.mp h],
+  }
 end
+
 
 @[simp]
 lemma list.num_sign_changes_eq_sign'
@@ -314,7 +329,15 @@ begin
     simp,
   },
   rcases (@trichotomous _ (<) _ b 0) with hb|hb|hb,
-  sorry
+  {
+    sorry
+  },
+  {
+    sorry
+  },
+  {
+    sorry
+  }
 end
 
 
@@ -369,6 +392,205 @@ induction l with a tail HI,
       simp [*] at *,
   }
 }
+end
+
+@[simp]
+def list.integral : list R → list R
+| [] := []
+| (a :: tail) := a :: list.map (λ x, a+x) (tail.integral)
+
+lemma list.aux_integral (a₀ a₁ : R) (t : list R) :
+((a₀ + a₁) :: t).integral = (a₀ :: a₁ :: t).integral.tail := by norm_num
+
+
+@[simp]
+lemma list.integral_num_sign_changes_zero  (t : list R) :
+(0 :: t).integral.num_sign_changes = t.integral.num_sign_changes :=
+begin
+simp only [list.integral, zero_add, map_id'', list.num_sign_changes_zero],
+end
+
+@[simp]
+lemma list.integral_num_sign_changes_zero' (a : R)
+(ha : a = 0)  (t : list R) :
+(a :: t).integral.num_sign_changes = 
+t.integral.num_sign_changes :=
+begin
+simp only [ha, list.integral, zero_add, map_id'', list.num_sign_changes_zero],
+end
+
+lemma list.integral_drop_while (l : list R) :
+(drop_while (eq 0) l).integral =
+drop_while (eq 0) l.integral :=
+begin
+induction l with a tail,
+{
+  simp [drop_while],
+},
+by_cases h : a = 0,
+{
+  subst h,
+  simpa [drop_while] using l_ih,
+},
+replace h := ne_comm.mp h,
+simp [drop_while, h],
+end
+
+
+lemma list.ilast_simp1 [inhabited R]
+  (tail : list R) : ∀ a b : R,
+  (a :: b :: tail).ilast = (b :: tail).ilast :=
+begin
+  induction tail with c t,
+  {
+    simp [ilast],
+  },
+  {
+    simp [ilast],
+    intros b,
+    specialize tail_ih b c,
+    rw tail_ih,
+  }
+end
+
+lemma list.ilast_simp2 [inhabited R]
+  {tail : list R} (h : tail ≠ list.nil) : ∀ a b : R,
+  (a :: b :: tail).ilast = (a :: tail).ilast :=
+begin
+  induction tail with c t,
+  {
+    contradiction,
+  },
+  {
+    simp [ilast],
+    intros b,
+    rw list.ilast_simp1,
+  }
+end
+
+lemma list.induction_length
+{P : list R → Prop}
+(h : ∀ (n : ℕ),
+(∀ (l : list R), l.length = n → P l)) :
+∀ l, P l :=
+begin
+sorry
+end
+
+lemma key_lemma_aux [inhabited R]
+(a₀ a₁ : R) (h : a₁ ≠ 0) (h1 : a₀ + a₁ = 0):
+  ∃ (m : ℕ), V (a₀ :: a₁ :: []) =
+  V ((a₀ :: a₁ :: []).integral) + 2*m+1 :=
+begin
+use 0,
+rw show a₀ = -a₁, by linarith [h1],
+simp [h],
+end
+
+/-
+lemma key_lemma' [inhabited R] (a₀ a₁ a₂ : R) (t : list R) (h2 : a₂ ≠ 0):
+  ∃ (m : ℕ), V (a₀ :: a₁ :: a₂ :: t) = V ((a₀ :: a₁ :: a₂ :: t).integral) + 2*m+1 :=
+begin
+  induction t with a₃ tail,
+  {
+    sorry,
+  },
+  {
+    rcases (@trichotomous _ (<) _ a₀ 0) with h0|h0|h0,
+    work_on_goal 2
+    {
+      subst h0,
+      rw list.integral_num_sign_changes_zero at ⊢ t_ih,
+      rw @list.num_sign_changes_zero _ _ (0 : R) (by refl) at ⊢ t_ih,
+      sorry
+    },
+    all_goals {rcases (@trichotomous _ (<) _ a₁ 0) with h1|h1|h1};
+    sorry,
+    sorry,
+  }
+end
+-/
+
+@[simp]
+lemma list.ilast_singleton [inhabited R] (a : R) : [a].ilast = a := rfl
+
+lemma list.nil_of_length_zero {l : list R} : l.length = 0 → l = nil :=
+begin
+intro h,
+cases l, refl, simpa using h,
+end
+
+lemma key_lemma [inhabited R] (t : list R)
+:   ∀ (a₀ a₁ : R),  a₀ + a₁ + t.sum = 0 →  
+(a₁ :: t).ilast ≠ 0 →
+  ∃ m,  V (a₀ :: a₁ :: t) 
+  = V ((a₀ :: a₁ :: t).integral) + 2*m + 1:=
+begin
+  apply list.induction_length _ t,
+  clear t,
+  intro n,
+  induction n with n hn,
+  {
+    intros l hlength a₀ a₁ hsum hlast,
+    have hnil := list.nil_of_length_zero hlength,
+    subst hnil,
+    simp at hsum hlast,
+    simp [show a₀ = -a₁, by linarith, hlast],
+  },
+  {
+    intros l hlength a₀ a₁ hsum hlast,
+    --set r := (a₀ + a₁) :: l with hr,
+    have h_head_tail :  (l.head :: l.tail) = l,
+    {
+      apply cons_head_tail,
+      intro hc,
+      subst hc,
+      contradiction,},
+    have hl_length : l.tail.length = n,
+    {
+      sorry
+    },
+    have hl_sum : a₀ + a₁ + l.head + l.tail.sum = 0,
+    {
+      sorry
+    },
+    have hl_ilast : (l.head :: l.tail).ilast ≠ 0,
+    {
+      rw h_head_tail,
+      sorry
+    },
+    specialize hn l.tail hl_length (a₀ + a₁)
+      l.head hl_sum hl_ilast,
+    simp_rw list.aux_integral at hn,
+    simp_rw h_head_tail at hn,
+    cases hn with r hr,
+    by_cases h01 : 0 ≤ a₀ * a₁,
+    {
+      rw show (a₀ :: a₁ :: l).num_sign_changes = ((a₀+a₁) :: l).num_sign_changes,
+      by
+      {
+        sorry
+      },
+      rw show (a₀ :: a₁ :: l).integral.num_sign_changes = (a₀ :: a₁ :: l).integral.tail.num_sign_changes,
+      by {
+        sorry
+      },
+      use r,
+      exact hr,
+    },
+    {
+      by_cases h0 : 0 < a₀,
+      {
+        have  h1: a₁ < 0, sorry,
+        sorry
+      },
+      {
+        -- replace h0 : a₀ < 0, by linarith [h0],
+        sorry -- this is done exactly as the above case, swapping signs. Use wlog tactic?
+      }
+    }
+  }
+  
 end
 
 
