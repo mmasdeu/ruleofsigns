@@ -468,15 +468,6 @@ begin
   }
 end
 
-lemma list.induction_length
-{P : list R → Prop}
-(h : ∀ (n : ℕ),
-(∀ (l : list R), l.length = n → P l)) :
-∀ l, P l :=
-begin
-sorry
-end
-
 lemma key_lemma_aux [inhabited R]
 (a₀ a₁ : R) (h : a₁ ≠ 0) (h1 : a₀ + a₁ = 0):
   ∃ (m : ℕ), V (a₀ :: a₁ :: []) =
@@ -526,57 +517,40 @@ lemma key_lemma [inhabited R] (t : list R)
   ∃ m,  V (a₀ :: a₁ :: t) 
   = V ((a₀ :: a₁ :: t).integral) + 2*m + 1:=
 begin
-  apply list.induction_length _ t,
-  clear t,
-  intro n,
-  induction n with n hn,
+  induction t with t_head t_tail,
   {
-    intros l hlength a₀ a₁ hsum hlast,
-    have hnil := list.nil_of_length_zero hlength,
-    subst hnil,
+    intros a₀ a₁ hsum hlast,
     simp at hsum hlast,
     simp [show a₀ = -a₁, by linarith, hlast],
   },
   {
-    intros l hlength a₀ a₁ hsum hlast,
-    --set r := (a₀ + a₁) :: l with hr,
-    have h_head_tail :  (l.head :: l.tail) = l,
-    {
-      apply cons_head_tail,
-      intro hc,
-      subst hc,
-      contradiction,},
-    have hl_length : l.tail.length = n,
+    let t := t_head :: t_tail,
+    intros a₀ a₁ hsum hlast,
+    specialize t_ih (a₀ + a₁) t_head,
+    have: a₀ + a₁ + t_head + t_tail.sum = 0,
     {
       sorry
     },
-    have hl_sum : a₀ + a₁ + l.head + l.tail.sum = 0,
+    specialize t_ih this,
+    have: (t_head :: t_tail).ilast ≠ 0,
     {
       sorry
     },
-    have hl_ilast : (l.head :: l.tail).ilast ≠ 0,
-    {
-      rw h_head_tail,
-      sorry
-    },
-    specialize hn l.tail hl_length (a₀ + a₁)
-      l.head hl_sum hl_ilast,
-    simp_rw list.aux_integral at hn,
-    simp_rw h_head_tail at hn,
-    cases hn with r hr,
+    specialize t_ih this,
+    obtain ⟨m, hm⟩ := t_ih,
+    simp_rw list.aux_integral at hm,
     by_cases h01 : 0 ≤ a₀ * a₁,
     {
-      rw show (a₀ :: a₁ :: l).num_sign_changes = ((a₀+a₁) :: l).num_sign_changes,
+      rw show (a₀ :: a₁ :: t).num_sign_changes = ((a₀+a₁) :: t).num_sign_changes,
       by
       {
         sorry
       },
-      rw show (a₀ :: a₁ :: l).integral.num_sign_changes = (a₀ :: a₁ :: l).integral.tail.num_sign_changes,
+      rw show (a₀ :: a₁ :: t).integral.num_sign_changes = (a₀ :: a₁ :: t).integral.tail.num_sign_changes,
       by {
         sorry
       },
-      use r,
-      exact hr,
+      exact ⟨m, hm⟩,
     },
     {
       by_cases h0 : 0 < a₀,
