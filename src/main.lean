@@ -316,7 +316,7 @@ end
 
 @[simp]
 lemma list.num_sign_changes_eq_sign'
-{a : R} (ha : 0 < a) (l : list R) :
+{l : list R} {a : R} (ha : 0 < a) :
 list.num_sign_changes (a :: l) =
 list.num_sign_changes (1 :: l) :=
 begin
@@ -324,16 +324,22 @@ begin
   {
     simp [ha],
   },
-  cases l with b l,
+  induction l with b l HI,
+  --cases l with b l,
   {
     simp,
   },
   rcases (@trichotomous _ (<) _ b 0) with hb|hb|hb,
   {
+    have hab : a * b < 0,
+    {
+      nlinarith [ha, hb],
+    },
     sorry
+
   },
   {
-    sorry
+    simp [hb, HI],
   },
   {
     sorry
@@ -394,13 +400,32 @@ induction l with a tail HI,
 }
 end
 
+
+lemma list.filter_zero_num_sign_changes (l : list R) :
+(filter (not ∘ (eq 0)) l).num_sign_changes =
+l.num_sign_changes :=
+begin
+induction l with a tail,
+{
+  simp,
+},
+by_cases h : a = 0,
+{
+  subst h,
+  simpa using l_ih,
+},
+replace h := ne_comm.mp h,
+simp [list.filter, h] at l_ih ⊢,
+sorry
+end
+
 @[simp]
 def list.integral : list R → list R
 | [] := []
 | (a :: tail) := a :: list.map (λ x, a+x) (tail.integral)
 
-lemma list.aux_integral (a₀ a₁ : R) (t : list R) :
-((a₀ + a₁) :: t).integral = (a₀ :: a₁ :: t).integral.tail := by norm_num
+@[simp] lemma list.aux_integral (a₀ a₁ : R) (t : list R) :
+(a₀ :: a₁ :: t).integral.tail = ((a₀ + a₁) :: t).integral := by norm_num
 
 
 @[simp]
@@ -419,21 +444,22 @@ begin
 simp only [ha, list.integral, zero_add, map_id'', list.num_sign_changes_zero],
 end
 
-lemma list.integral_drop_while (l : list R) :
-(drop_while (eq 0) l).integral =
-drop_while (eq 0) l.integral :=
+lemma list.integral_filter_zero_num_sign_changes (l : list R) :
+(filter (not ∘ (eq 0)) l).integral.num_sign_changes =
+(l.integral).num_sign_changes :=
 begin
 induction l with a tail,
 {
-  simp [drop_while],
+  simp,
 },
 by_cases h : a = 0,
 {
   subst h,
-  simpa [drop_while] using l_ih,
+  simpa using l_ih,
 },
 replace h := ne_comm.mp h,
-simp [drop_while, h],
+simp [list.filter, h] at l_ih ⊢,
+sorry
 end
 
 
@@ -511,6 +537,63 @@ intro h,
 cases l, refl, simpa using h,
 end
 
+lemma aux_1
+{t : list R} (a₀ a₁ : R) (h0 : 0 < a₀)
+  (h : 0 ≤ a₀ * a₁) :
+  (a₀ :: a₁ :: t).num_sign_changes =
+  ((a₀ + a₁) :: t).num_sign_changes :=
+begin
+  by_cases h1 : a₁ = 0,
+  {
+    simp [h1],
+  },
+  {
+    have h2 : 0 < a₁,
+    {
+      have : 0 ≤ a₁,
+      { nlinarith,},
+      exact (ne.symm h1).lt_of_le this,
+    },
+    have h' : ¬ a₀ * a₁ < 0,
+    { nlinarith,},
+    have h'' : 0 < a₀ + a₁,
+    { nlinarith,},
+    calc
+    (a₀ :: a₁ :: t).num_sign_changes =
+      (a₁ :: t).num_sign_changes : by {
+        simp [h',h1],
+      }
+    ... = (1 :: t).num_sign_changes  : by {
+      rw list.num_sign_changes_eq_sign' h2,
+    }
+    ... = _ : by {
+      rw list.num_sign_changes_eq_sign' h'',
+    }
+  }
+end
+@[simp] lemma aux_2
+{t : list R} (a₀ a₁: R) [inhabited R] : 
+(a₀ :: a₁ :: t).ilast = (a₁ :: t).ilast :=
+begin
+sorry
+end
+
+
+lemma aux_3
+{t : list R} {a₀ a₁ : R}
+  (h : 0 ≤ a₀ * a₁) :
+  (a₀ :: a₁ :: t).integral.num_sign_changes =
+  ((a₀ + a₁) :: t).integral.num_sign_changes :=
+begin
+  by_cases h0 : a₀ = 0,
+  {
+    simp [h0],
+  },
+  {
+    sorry
+  }
+end
+
 lemma key_lemma [inhabited R] (t : list R)
 :   ∀ (a₀ a₁ : R),  a₀ + a₁ + t.sum = 0 →  
 (a₁ :: t).ilast ≠ 0 →
@@ -524,35 +607,37 @@ begin
     simp [show a₀ = -a₁, by linarith, hlast],
   },
   {
-    let t := t_head :: t_tail,
+    set t := t_head :: t_tail with ht,
     intros a₀ a₁ hsum hlast,
     specialize t_ih (a₀ + a₁) t_head,
-    have: a₀ + a₁ + t_head + t_tail.sum = 0,
+    have H0 : a₀ + a₁ + t_head + t_tail.sum = 0,
     {
-      sorry
+      rw ht at hsum,
+      simp at hsum,
+      linarith [hsum],
     },
-    specialize t_ih this,
-    have: (t_head :: t_tail).ilast ≠ 0,
+    specialize t_ih H0,
+    have H1: (t_head :: t_tail).ilast ≠ 0,
     {
-      sorry
+      rw ht at hlast,
+      simpa using hlast,
     },
-    specialize t_ih this,
+    specialize t_ih H1,
+    clear H0 H1,
     obtain ⟨m, hm⟩ := t_ih,
-    simp_rw list.aux_integral at hm,
     by_cases h01 : 0 ≤ a₀ * a₁,
     {
-      rw show (a₀ :: a₁ :: t).num_sign_changes = ((a₀+a₁) :: t).num_sign_changes,
-      by
-      {
-        sorry
-      },
-      rw show (a₀ :: a₁ :: t).integral.num_sign_changes = (a₀ :: a₁ :: t).integral.tail.num_sign_changes,
-      by {
-        sorry
-      },
-      exact ⟨m, hm⟩,
+      rw show (a₀ :: a₁ :: t).num_sign_changes
+      = ((a₀+a₁) :: t).num_sign_changes, by exact aux_1 a₀ a₁ h01,
+      use m,
+      rw show (a₀ :: a₁ :: t).integral.num_sign_changes
+      = ((a₀ + a₁) :: t).integral.num_sign_changes,
+      by apply aux_3 h01,
+      exact hm,
     },
     {
+      replace h01 : a₀ * a₁ < 0, by linarith [h01],
+      simp [h01],
       by_cases h0 : 0 < a₀,
       {
         have  h1: a₁ < 0, sorry,
