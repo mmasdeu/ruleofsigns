@@ -368,7 +368,8 @@ begin
 norm_num,
 end
 
-lemma list.num_sign_changes_smul (l : list R) (c : R) (hc : c ≠ 0) :
+lemma list.num_sign_changes_smul (l : list R) {c : R}
+(hc : c ≠ 0) :
 l.num_sign_changes = (l.map (λ x, c * x)).num_sign_changes :=
 begin
 induction l with a tail HI,
@@ -400,6 +401,14 @@ induction l with a tail HI,
 }
 end
 
+lemma list.num_sign_changes_neg (l : list R) :
+l.num_sign_changes = (l.map (λ x, -x)).num_sign_changes :=
+begin
+have h : -(1:R) ≠ 0, by linarith,
+rw list.num_sign_changes_smul _ h,
+simp,
+end
+
 
 lemma list.filter_zero_num_sign_changes (l : list R) :
 (filter (not ∘ (eq 0)) l).num_sign_changes =
@@ -427,6 +436,19 @@ def list.integral : list R → list R
 @[simp] lemma list.aux_integral (a₀ a₁ : R) (t : list R) :
 (a₀ :: a₁ :: t).integral.tail = ((a₀ + a₁) :: t).integral := by norm_num
 
+lemma list.integral_smul  (t : list R) (c : R):
+t.integral.map (λ x, c * x) = (t.map (λ x, c * x)).integral :=
+begin
+  sorry
+end
+
+lemma list.integral_neg  (t : list R) :
+t.integral.map (has_neg.neg) = (t.map (has_neg.neg)).integral :=
+begin
+  have : has_neg.neg =  (λ x, -(1:R) * x), by simp,
+  rw this,
+  rw list.integral_smul,
+end
 
 @[simp]
 lemma list.integral_num_sign_changes_zero  (t : list R) :
@@ -537,7 +559,7 @@ intro h,
 cases l, refl, simpa using h,
 end
 
-lemma aux_1
+lemma aux_1'
 {t : list R} (a₀ a₁ : R) (h0 : 0 < a₀)
   (h : 0 ≤ a₀ * a₁) :
   (a₀ :: a₁ :: t).num_sign_changes =
@@ -571,6 +593,40 @@ begin
     }
   }
 end
+
+lemma aux_1
+{t : list R} (a₀ a₁ : R)
+  (h : 0 ≤ a₀ * a₁) :
+  (a₀ :: a₁ :: t).num_sign_changes =
+  ((a₀ + a₁) :: t).num_sign_changes :=
+begin
+  rcases (@trichotomous _ (<) _ a₀ 0) with h0|h0|h0,
+  {
+    calc
+    (a₀ :: a₁ :: t).num_sign_changes =
+    ((a₀ :: a₁ :: t).map has_neg.neg).num_sign_changes :
+    by { rw list.num_sign_changes_neg,
+    }
+    ... = (-a₀ :: -a₁ :: t.map has_neg.neg).num_sign_changes : by {sorry}
+    ... = ((-a₀ + -a₁) :: t.map has_neg.neg).num_sign_changes : by {
+      apply aux_1'; linarith,
+    }
+    ... = (((a₀ + a₁) :: t).map has_neg.neg).num_sign_changes : by {
+      simp,
+      rw show -a₀ + -a₁ = -a₁ + -a₀, by ring,
+    }
+    ... = _ : by {
+      rw ←list.num_sign_changes_neg,
+      }
+  },
+  {
+    simp [h0],
+  },
+  {
+    exact aux_1' a₀ a₁ h0 h,
+  }
+end
+
 @[simp] lemma aux_2
 {t : list R} (a₀ a₁: R) [inhabited R] : 
 (a₀ :: a₁ :: t).ilast = (a₁ :: t).ilast :=
@@ -579,8 +635,8 @@ sorry
 end
 
 
-lemma aux_3
-{t : list R} {a₀ a₁ : R}
+lemma aux_3'
+{t : list R} {a₀ a₁ : R} (h0 : 0 < a₀)
   (h : 0 ≤ a₀ * a₁) :
   (a₀ :: a₁ :: t).integral.num_sign_changes =
   ((a₀ + a₁) :: t).integral.num_sign_changes :=
@@ -591,6 +647,36 @@ begin
   },
   {
     sorry
+  }
+end
+
+lemma aux_3
+{t : list R} {a₀ a₁ : R}
+  (h : 0 ≤ a₀ * a₁) :
+  (a₀ :: a₁ :: t).integral.num_sign_changes =
+  ((a₀ + a₁) :: t).integral.num_sign_changes :=
+begin
+  rcases (@trichotomous _ (<) _ a₀ 0) with h0|h0|h0,
+  {
+    calc
+    (a₀ :: a₁ :: t).integral.num_sign_changes
+    = ((a₀ :: a₁ :: t).integral.map(has_neg.neg)).num_sign_changes : by {
+      rw list.num_sign_changes_neg,
+    }
+    ... = (-a₀ :: -a₁ :: t.map(has_neg.neg)).integral.num_sign_changes :
+    by {
+      rw list.integral_neg,
+      simp,
+    }
+    ... = _ : by {
+      sorry
+    }
+  },
+  {
+    simp [h0],
+  },
+  {
+    apply aux_3' h0 h,
   }
 end
 
@@ -664,7 +750,7 @@ lemma polynomial.num_sign_changes_smul (f : polynomial R) {c : R} (hc : c ≠ 0)
 (c • f).num_sign_changes = f.num_sign_changes :=
 begin
   rw [polynomial.num_sign_changes, polynomial.num_sign_changes,
-  f.nonzero_coeff_list_smul hc,←list.num_sign_changes_smul _  _ hc],
+  f.nonzero_coeff_list_smul hc,←list.num_sign_changes_smul _ hc],
 end
 
 lemma polynomial.support_mul_X (f : polynomial R) :
